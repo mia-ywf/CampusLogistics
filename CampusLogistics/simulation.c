@@ -1,0 +1,47 @@
+#include "simulation.h"
+#include <stddef.h>
+
+int startDelivery(Order* order, Vehicle* vehicle, Path* path)
+{
+    if (order == NULL || vehicle == NULL || path == NULL)
+    {
+        return 0;
+    }
+
+    if (order->status != ORDER_WAITING)
+    {
+        return 0;
+    }
+
+    if (vehicle->status != VEHICLE_IDLE)
+    {
+        return 0;
+    }
+
+    /* 车辆开始配送 */
+    order->status = ORDER_DELIVERING;
+    vehicle->status = VEHICLE_DELIVERING;
+    vehicle->assigned_order_id = order->id;
+
+    return 1;
+}
+
+int finishDelivery(Order* order, Vehicle* vehicle)
+{
+    if (order == NULL || vehicle == NULL)
+    {
+        return 0;
+    }
+
+    if (order->status != ORDER_DELIVERING)
+    {
+        return 0;
+    }
+
+    /* 配送完成 */
+    order->status = ORDER_COMPLETED;
+    vehicle->status = VEHICLE_IDLE;
+    vehicle->assigned_order_id = -1;
+
+    return 1;
+}
