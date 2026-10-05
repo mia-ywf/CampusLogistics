@@ -20,10 +20,10 @@ void initPriorityQueue(PriorityQueue* queue);
 /* 插入订单 */
 int pushOrder(PriorityQueue* queue, Order orders[], int orderId);
 
-/* 取出最高优先级订单 */
+/* 取出最高优先级订单 （最大堆）*/
 int popOrder(PriorityQueue* queue, Order orders[]);
 
-/* 查看队首订单 */
+/* 查看队首订单 （最大堆）*/
 int peekOrder(PriorityQueue* queue);
 
 /* 调度：选择优先级最高的等待订单，并分配空闲车辆 */

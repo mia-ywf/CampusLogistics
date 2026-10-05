@@ -1,5 +1,7 @@
 #include "vehicle.h"
 #include <stddef.h>
+#define _CRT_SECURE_NO_WARNINGS
+#include <cstdio>
 
 void initVehicles(Vehicle vehicles[], int* count)
 {
@@ -48,4 +50,33 @@ int getIdleVehicleCount(Vehicle vehicles[], int count)
     }
 
     return idleCount;
+}
+
+//从txt里面读取车辆信息
+int LoadVehicles(const char* filename, Vehicle vehicles[], int* count)
+{
+    FILE* fp = fopen(filename, "r");
+    int id, position, status, currentOrder;
+    int n = 0;
+
+    if (fp == NULL)
+    {
+        printf("Cannot open %s\n", filename);
+        return 0;
+    }
+
+    while (fscanf(fp, "%d %d %d %d", &id, &position, &status, &currentOrder) == 4)
+    {
+        if (n >= MAX_VEHICLES) break;
+        vehicles[n].id = id;
+        vehicles[n].position = position;
+        vehicles[n].status = status;
+        vehicles[n].currentOrder = currentOrder;
+        n++;
+    }
+
+    fclose(fp);
+    *count = n;
+    printf("Loaded %d vehicles\n", n);
+    return 1;
 }

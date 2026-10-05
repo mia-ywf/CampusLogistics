@@ -15,7 +15,7 @@ typedef struct
 } Order;
 
 /* 初始化订单 */
-void initOrders(Order orders[], int* count);
+void initOrders(Order orders[], int* count);//count记录当前订单数
 
 /* 添加订单 */
 int addOrder(Order orders[], int* count, Order order);
@@ -25,5 +25,7 @@ int deleteOrder(Order orders[], int* count, int orderId);
 
 /* 查找订单 */
 Order* findOrder(Order orders[], int count, int orderId);
+
+int LoadOrders(const char* filename, Order orders[], int* count);   
 
 #endif

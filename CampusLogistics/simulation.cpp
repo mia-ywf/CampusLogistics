@@ -21,7 +21,7 @@ int startDelivery(Order* order, Vehicle* vehicle, Path* path)
     /* 车辆开始配送 */
     order->status = ORDER_DELIVERING;
     vehicle->status = VEHICLE_DELIVERING;
-    vehicle->assigned_order_id = order->id;
+    vehicle->currentOrder = order->id;
 
     return 1;
 }
@@ -41,7 +41,7 @@ int finishDelivery(Order* order, Vehicle* vehicle)
     /* 配送完成 */
     order->status = ORDER_COMPLETED;
     vehicle->status = VEHICLE_IDLE;
-    vehicle->assigned_order_id = -1;
+    vehicle->currentOrder = -1;
 
     return 1;
 }
