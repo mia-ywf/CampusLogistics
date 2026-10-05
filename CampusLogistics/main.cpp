@@ -32,10 +32,10 @@ int main(void)
     initOrders(orders, &orderCount);
     initVehicles(vehicles, &vehicleCount);
 
-    if (!LoadLocations(&g, "data/locations.txt")) return 1;
-    if (!LoadRoads(&g, "data/roads.txt")) return 1;
-    LoadOrders("data/orders.txt", orders, &orderCount);
-    LoadVehicles("data/vehicles.txt", vehicles, &vehicleCount);
+    if (!LoadLocations(&g, "locations.txt")) return 1;
+    if (!LoadRoads(&g, "roads.txt")) return 1;
+    LoadOrders("orders.txt", orders, &orderCount);
+    LoadVehicles("vehicles.txt", vehicles, &vehicleCount);
 
     hasPath = dijkstra(&g, 0, 5, &path);
     if (hasPath) AddLog("Path found");
@@ -63,9 +63,7 @@ int main(void)
         DrawStats(orders, orderCount, vehicles, vehicleCount);
         DrawLogs();
 
-        DrawButton(BTN_ADD_ORDER_X, BTN_ADD_ORDER_Y,
-            BTN_ADD_ORDER_W, BTN_ADD_ORDER_H,
-            "Add Order");
+     
 
         FlushBatchDraw();
         Sleep(30);

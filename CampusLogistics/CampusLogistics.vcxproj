@@ -159,7 +159,7 @@
     <ClInclude Include="vehicle.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="location.txt" />
+    <Text Include="locations.txt" />
     <Text Include="roads.txt" />
     <Text Include="vehicles.txt" />
   </ItemGroup>
