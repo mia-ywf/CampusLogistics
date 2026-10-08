@@ -3,7 +3,7 @@
 #include <graphics.h>
 
 void DrawButton(int x, int y, int w, int h, const char* text);
-bool IsButtonClicked(int mouseX, int mouseY, int x1, int y1, int x2, int y2);
+int  IsButtonClicked(int mx, int my, int x, int y, int w, int h);
 
 #include "common.h"
 #include "graph.h"
@@ -23,4 +23,4 @@ void DrawLogs(void);
 void AddLog(const char* msg);
 
 #endif
-#pragma once
+

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "gui.h"
+#include "stats.h"
 
 #define WIN_W 1200
 #define WIN_H 800
@@ -107,31 +108,26 @@ void DrawVehicles(Vehicle vehicles[], int count)
     }
 }
 
-void DrawStats(Order orders[], int count,
+void DrawStats(Order orders[], int count ,
     Vehicle vehicles[], int countV)
 {
-    int i;
-    int waiting = 0, delivering = 0, completed = 0;
-    int idle = 0, busy = 0;
+    Stats stats ;
     char buf[256];
 
-    for (i = 0; i < count; i++)
-    {
-        if (orders[i].status == ORDER_WAITING) waiting++;
-        else if (orders[i].status == ORDER_DELIVERING) delivering++;
-        else if (orders[i].status == ORDER_COMPLETED) completed++;
-    }
-    for (i = 0; i < countV; i++)
-    {
-        if (vehicles[i].status == VEHICLE_IDLE) idle++;
-        else busy++;
-    }
+    ComputeStats( orders,count,vehicles,countV,&stats);
 
     outtextxy(800, 600, "Statistics");
+
     sprintf(buf, "Orders: tot%d wait%d del%d done%d",
-        count, waiting, delivering, completed);
+        stats.totalOrders,
+        stats.waitingOrders,
+        stats.deliveringOrders,
+        stats.completedOrders);
     outtextxy(800, 630, buf);
-    sprintf(buf, "Vehicles: idle%d busy%d", idle, busy);
+
+    sprintf(buf, "Vehicles: idle%d busy%d",
+        stats.idleVehicles,
+        stats.deliveringVehicles);
     outtextxy(800, 650, buf);
 }
 
@@ -170,7 +166,7 @@ void DrawButton(int x, int y, int w, int h, const char* text)
 }
 
 // 判断鼠标点击是否落在按钮内
-bool IsButtonClicked(int mx, int my, int x, int y, int w, int h)
+int IsButtonClicked(int mx, int my, int x, int y, int w, int h)
 {
     return (mx >= x && mx <= x + w && my >= y && my <= y + h);
 }
