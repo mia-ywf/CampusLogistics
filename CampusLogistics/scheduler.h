@@ -10,7 +10,7 @@
 /* 优先队列 */
 typedef struct
 {
-    int orderIds[MAX_ORDERS];
+	int orderIndex[MAX_ORDERS];// 存储订单ID的数组下标
     int size;
 } PriorityQueue;
 

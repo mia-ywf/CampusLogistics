@@ -318,6 +318,7 @@ int LoadRoads(Graph* g, const char* filename)
 }
 
 // 广度优先搜索 BFS
+// visited 数组大小应为 MAX_LOCATIONS
 int BFS(Graph* g, int startIdx, int visited[])
 {
     int queue[MAX_LOCATIONS];
