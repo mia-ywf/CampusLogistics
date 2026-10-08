@@ -15,8 +15,8 @@ void InitGUI(void);
 void CloseGUI(void);
 void DrawMap(Graph* g);
 void DrawPath(Graph* g, Path* path);
-void DrawOrders(Order orders[], int count);
-void DrawVehicles(Vehicle vehicles[], int count);
+void DrawOrders(Order orders[], int count, int selectedOrderId);
+void DrawVehicles(Vehicle vehicles[], int count, int selectedVehicleId);
 void DrawStats(Order orders[], int count,
     Vehicle vehicles[], int countV);
 void DrawLogs(void);

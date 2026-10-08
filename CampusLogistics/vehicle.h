@@ -19,6 +19,8 @@ int addVehicle(Vehicle vehicles[], int* count, Vehicle vehicle);
 Vehicle* findVehicle(Vehicle vehicles[], int count, int vehicleId);
 // 获取空闲车辆数量
 int getIdleVehicleCount(Vehicle vehicles[], int count);
+// 删除车辆
+int deleteVehicle(Vehicle vehicles[], int* count, int vehicleId);
 
 // 从文件加载车辆
 int LoadVehicles(const char* filename, Vehicle vehicles[], int* count);//新增

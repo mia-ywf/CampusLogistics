@@ -1,6 +1,18 @@
 #include "scheduler.h"
-#include "vehicle.h"
 #include <cstddef>
+
+/* 比较两个订单的优先级 */
+int higherPriority(Order orders[], int a, int b)
+{
+    /* 优先级不同：优先级高的优先 */
+    if (orders[a].priority != orders[b].priority)
+    {
+        return orders[a].priority > orders[b].priority;
+    }
+
+    /* 优先级相同：创建时间早的优先 */
+    return orders[a].createTime < orders[b].createTime;
+}
 
 /* 初始化优先队列 */
 void initPriorityQueue(PriorityQueue* queue)
@@ -42,8 +54,9 @@ int pushOrder(PriorityQueue* queue, Order orders[], int orderIndex)
     {
         parent = (i - 1) / 2;
 
-        if (orders[queue->orderIndex[parent]].priority >=
-            orders[queue->orderIndex[i]].priority)
+        if (higherPriority(orders,
+            queue->orderIndex[parent],
+            queue->orderIndex[i]))
         {
             break;
         }
@@ -102,15 +115,17 @@ int popOrder(PriorityQueue* queue, Order orders[])
         largest = i;
 
         if (left < queue->size &&
-            orders[queue->orderIndex[left]].priority >
-            orders[queue->orderIndex[largest]].priority)
+            higherPriority(orders,
+                queue->orderIndex[left],
+                queue->orderIndex[largest]))
         {
             largest = left;
         }
 
         if (right < queue->size &&
-            orders[queue->orderIndex[right]].priority >
-            orders[queue->orderIndex[largest]].priority)
+            higherPriority(orders,
+                queue->orderIndex[right],
+                queue->orderIndex[largest]))
         {
             largest = right;
         }
@@ -141,4 +156,3 @@ int peekOrder(PriorityQueue* queue)
 
     return queue->orderIndex[0];
 }
-

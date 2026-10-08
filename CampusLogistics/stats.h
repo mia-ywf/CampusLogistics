@@ -4,7 +4,7 @@
 #include "common.h"
 #include "order.h"
 #include "vehicle.h"
-
+/* 统计信息结构体 */
 typedef struct
 {
     int totalOrders;
@@ -12,13 +12,14 @@ typedef struct
     int deliveringOrders;
     int completedOrders;
 
-    int idleVehicles;
+	int idleVehicles;//空闲车辆数
     int deliveringVehicles;
 
     int totalDistance;
     double avgDistance;
 } Stats;
 
+/* 计算统计信息 */
 void ComputeStats(
     Order orders[], 
     int orderCount,

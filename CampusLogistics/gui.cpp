@@ -77,35 +77,74 @@ void DrawPath(Graph* g, Path* path)
     setlinecolor(BLACK);
 }
 
-void DrawOrders(Order orders[], int count)
+void DrawOrders(Order orders[], int count, int selectedOrderId)
 {
     char buf[256];
     int i;
 
     outtextxy(800, 20, "Orders");
+
     for (i = 0; i < count && i < 15; i++)
     {
+        int y = 50 + i * 20;
+
+        // 选中的订单高亮
+        if (orders[i].id == selectedOrderId)
+        {
+            setfillcolor(LIGHTBLUE);
+            fillrectangle(795, y - 2, 1150, y + 18);
+            settextcolor(BLACK);
+        }
+        else
+        {
+            settextcolor(WHITE);
+        }
+
         sprintf(buf, "Order%d status%d pri%d",
-            orders[i].id, orders[i].status, orders[i].priority);
-        outtextxy(800, 50 + i * 20, buf);
+            orders[i].id,
+            orders[i].status,
+            orders[i].priority);
+
+        outtextxy(800, y, buf);
     }
+
+    settextcolor(WHITE);
 }
 
-void DrawVehicles(Vehicle vehicles[], int count)
+void DrawVehicles(Vehicle vehicles[], int count, int selectedVehicleId)
 {
     char buf[256];
     int i;
 
     outtextxy(800, 400, "Vehicles");
+
     for (i = 0; i < count; i++)
     {
+        int y = 430 + i * 20;
+
+        if (vehicles[i].id == selectedVehicleId)
+        {
+            // 选中车辆的整行高亮
+            setfillcolor(LIGHTBLUE);
+            fillrectangle(795, y - 2, 1150, y + 18);
+
+            settextcolor(BLACK);
+        }
+        else
+        {
+            settextcolor(WHITE);
+        }
+
         sprintf(buf, "V%d pos%d st%d ord%d",
             vehicles[i].id,
             vehicles[i].position,
             vehicles[i].status,
             vehicles[i].currentOrder);
-        outtextxy(800, 430 + i * 20, buf);
+
+        outtextxy(800, y, buf);
     }
+
+    settextcolor(WHITE);
 }
 
 void DrawStats(Order orders[], int count ,

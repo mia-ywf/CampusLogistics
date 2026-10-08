@@ -1,6 +1,7 @@
 #include "simulation.h"
 #include <stddef.h>
 
+/* 开始配送 */
 int startDelivery(Order* order, Vehicle* vehicle, Path* path)
 {
     if (order == NULL || vehicle == NULL || path == NULL)
@@ -25,7 +26,7 @@ int startDelivery(Order* order, Vehicle* vehicle, Path* path)
 
     return 1;
 }
-
+/* 完成配送 */
 int finishDelivery(Order* order, Vehicle* vehicle)
 {
     if (order == NULL || vehicle == NULL)
