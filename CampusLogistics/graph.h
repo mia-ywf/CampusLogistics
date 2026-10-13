@@ -22,7 +22,7 @@ typedef struct
 {
 	int      locationCount;
 	Location locations[MAX_LOCATIONS];
-	EdgeNode* adj[MAX_LOCATIONS];       /* 顺着队友命名，用 adj */
+	EdgeNode* adj[MAX_LOCATIONS];     
 } Graph;
 
 //基础操作

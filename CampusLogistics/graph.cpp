@@ -261,7 +261,7 @@ void FreeGraph(Graph* g)
     g->locationCount = 0;
 }
 
-// 从文件加载地点
+// 从txt加载地点
 // 文件格式：id name x y
 int LoadLocations(Graph* g, const char* filename)
 {
@@ -290,7 +290,7 @@ int LoadLocations(Graph* g, const char* filename)
     return 1;
 }
 
-// 从文件加载道路
+// 从txt加载道路
 // 文件格式：from to distance
 int LoadRoads(Graph* g, const char* filename)
 {

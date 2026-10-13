@@ -23,6 +23,6 @@ int getIdleVehicleCount(Vehicle vehicles[], int count);
 int deleteVehicle(Vehicle vehicles[], int* count, int vehicleId);
 
 // 从文件加载车辆
-int LoadVehicles(const char* filename, Vehicle vehicles[], int* count);//新增
+int LoadVehicles(const char* filename, Vehicle vehicles[], int* count);
 
 #endif // !VEHICLE_H

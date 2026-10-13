@@ -2,12 +2,12 @@
 #include <stddef.h>
 #define _CRT_SECURE_NO_WARNINGS
 #include <cstdio>
-
+/* 初始化车辆 */
 void initVehicles(Vehicle vehicles[], int* count)
 {
     *count = 0;
 }
-
+/* 添加车辆：成功返回 1，失败返回 0 */
 int addVehicle(Vehicle vehicles[], int* count, Vehicle vehicle)
 {
     int i;
@@ -50,7 +50,7 @@ int addVehicle(Vehicle vehicles[], int* count, Vehicle vehicle)
 
     return 1;
 }
-
+/* 查找车辆：返回指向车辆的指针，如果未找到则返回 NULL */
 Vehicle* findVehicle(Vehicle vehicles[], int count, int vehicleId)
 {
     int i;
@@ -103,7 +103,7 @@ int deleteVehicle(Vehicle vehicles[], int* count, int vehicleId)
     // 没找到对应车辆
     return 0;
 }
-
+/* 获取空闲车辆数量 */
 int getIdleVehicleCount(Vehicle vehicles[], int count)
 {
     int i;
@@ -120,7 +120,7 @@ int getIdleVehicleCount(Vehicle vehicles[], int count)
     return idleCount;
 }
 
-//从txt里面读取车辆信息
+/* 从txt里面读取车辆信息 */
 int LoadVehicles(const char* filename, Vehicle vehicles[], int* count)
 {
     FILE* fp = fopen(filename, "r");

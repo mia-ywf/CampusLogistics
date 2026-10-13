@@ -11,7 +11,7 @@
 
 static char logs[100][256];
 static int  logCount = 0;
-
+// 初始化图形界面
 void InitGUI(void)
 {
     initgraph(WIN_W, WIN_H);
@@ -24,6 +24,7 @@ void CloseGUI(void)
     closegraph();
 }
 
+// 画地图：地点和道路
 void DrawMap(Graph* g)
 {
     int i;
@@ -57,6 +58,7 @@ void DrawMap(Graph* g)
     }
 }
 
+// 画路径
 void DrawPath(Graph* g, Path* path)
 {
     int i;
@@ -77,6 +79,7 @@ void DrawPath(Graph* g, Path* path)
     setlinecolor(BLACK);
 }
 
+// 画订单列表
 void DrawOrders(Order orders[], int count, int selectedOrderId)
 {
     char buf[256];
@@ -111,6 +114,7 @@ void DrawOrders(Order orders[], int count, int selectedOrderId)
     settextcolor(WHITE);
 }
 
+// 画车辆列表
 void DrawVehicles(Vehicle vehicles[], int count, int selectedVehicleId)
 {
     char buf[256];
@@ -147,6 +151,7 @@ void DrawVehicles(Vehicle vehicles[], int count, int selectedVehicleId)
     settextcolor(WHITE);
 }
 
+// 画统计信息
 void DrawStats(Order orders[], int count ,
     Vehicle vehicles[], int countV)
 {
@@ -170,6 +175,7 @@ void DrawStats(Order orders[], int count ,
     outtextxy(800, 650, buf);
 }
 
+// 记录日志
 void AddLog(const char* msg)
 {
     if (logCount < 100)
@@ -179,7 +185,7 @@ void AddLog(const char* msg)
         logCount++;
     }
 }
-
+// 画日志
 void DrawLogs(void)
 {
     int i;
@@ -209,3 +215,61 @@ int IsButtonClicked(int mx, int my, int x, int y, int w, int h)
 {
     return (mx >= x && mx <= x + w && my >= y && my <= y + h);
 }
+
+
+
+/* 在地图上绘制车辆，配送中的车辆使用实时坐标 */
+void DrawVehicleMarkers(
+    Graph* g,
+    Vehicle vehicles[],
+    int vehicleCount,
+    double vehicleX[],
+    double vehicleY[],
+    int moving[])
+{
+    int i;
+    int locationIndex;
+    int x, y;
+    char label[32];
+
+    if (g == NULL || vehicles == NULL ||
+        vehicleX == NULL || vehicleY == NULL || moving == NULL)
+        return;
+
+    for (i = 0; i < vehicleCount; i++)
+    {
+        if (moving[i])
+        {
+            x = (int)vehicleX[i];
+            y = (int)vehicleY[i];
+        }
+        else
+        {
+            locationIndex =
+                FindLocationIndexById(g, vehicles[i].position);
+
+            if (locationIndex < 0)
+                continue;
+
+            x = g->locations[locationIndex].x;
+            y = g->locations[locationIndex].y;
+        }
+
+        /* 多辆车位于同一点时，稍微错开显示 */
+        x += (i % 3) * 18 - 18;
+        y += (i / 3) * 18 - 9;
+
+        if (vehicles[i].status == VEHICLE_DELIVERING)
+            setfillcolor(RED);
+        else
+            setfillcolor(GREEN);
+
+        setlinecolor(WHITE);
+        fillcircle(x, y, 9);
+
+        sprintf(label, "V%d", vehicles[i].id);
+        settextcolor(WHITE);
+        outtextxy(x + 10, y - 8, label);
+    }
+}
+

@@ -14,6 +14,14 @@ int  IsButtonClicked(int mx, int my, int x, int y, int w, int h);
 void InitGUI(void);
 void CloseGUI(void);
 void DrawMap(Graph* g);
+
+/* 在地图上绘制车辆 */
+void DrawVehicleMarkers(
+    Graph* g,
+    Vehicle vehicles[],
+    int vehicleCount
+);
+
 void DrawPath(Graph* g, Path* path);
 void DrawOrders(Order orders[], int count, int selectedOrderId);
 void DrawVehicles(Vehicle vehicles[], int count, int selectedVehicleId);
@@ -21,6 +29,13 @@ void DrawStats(Order orders[], int count,
     Vehicle vehicles[], int countV);
 void DrawLogs(void);
 void AddLog(const char* msg);
+void DrawVehicleMarkers(
+    Graph* g,
+    Vehicle vehicles[],
+    int vehicleCount,
+    double vehicleX[],
+    double vehicleY[],
+    int moving[]);
 
 #endif
 

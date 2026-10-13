@@ -26,6 +26,7 @@ int deleteOrder(Order orders[], int* count, int orderId);
 /* 查找订单 */
 Order* findOrder(Order orders[], int count, int orderId);
 
+/* 从 txt 文件读取订单 */
 int LoadOrders(const char* filename, Order orders[], int* count);   
 
 #endif

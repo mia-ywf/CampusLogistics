@@ -83,7 +83,7 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
     /* 根据 prev[] 从终点反向恢复 */
     path->length = 0;
     current = end;
-
+    
     while (current != -1)
     {
         path->nodes[path->length] = current;
@@ -115,3 +115,4 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
 
     return 1;
 }
+
