@@ -1,4 +1,4 @@
-#define _CRT_SECURE_NO_WARNINGS
+﻿#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +8,11 @@
 void InitGraph(Graph* g)
 {
     int i;
+    if (g == NULL)
+    {
+        return;
+    }
+
     g->locationCount = 0;
     for (i = 0; i < MAX_LOCATIONS; i++)
     {
@@ -20,6 +25,10 @@ void InitGraph(Graph* g)
 int FindLocationIndexById(Graph* g, int id)
 {
     int i;
+    if (g == NULL)
+    {
+        return -1;
+    }
     for (i = 0; i < g->locationCount; i++)
     {
         if (g->locations[i].valid && g->locations[i].id == id)
@@ -34,6 +43,10 @@ int FindLocationIndexById(Graph* g, int id)
 int AddLocation(Graph* g, int id, const char* name, int x, int y)
 {
     int idx;
+    if (g == NULL)
+    {
+        return -1;
+    }
 
     // 校验：容量
     if (g->locationCount >= MAX_LOCATIONS)               return -1;
@@ -46,24 +59,71 @@ int AddLocation(Graph* g, int id, const char* name, int x, int y)
         y < MIN_COORD || y > MAX_COORD_Y)                return -1;
     // 校验：名字非空
     if (name == NULL || name[0] == '\0')                 return -1;
-
+    // 校验：名字不超长 
+    if (strlen(name) >= MAX_NAME_LEN)                    return -1;
+    
     idx = g->locationCount;
+
     g->locations[idx].id = id;
     strncpy(g->locations[idx].name, name, MAX_NAME_LEN - 1);
     g->locations[idx].name[MAX_NAME_LEN - 1] = '\0';
     g->locations[idx].x = x;
     g->locations[idx].y = y;
     g->locations[idx].valid = 1;
+    g->adj[idx] = NULL;         /* 新槽位的邻接表清空 */
     g->locationCount++;
 
     return idx;
 }
+
+// 修改地点
+int UpdateLocation(Graph* g, int id, const char* newName, int newX, int newY)
+{
+    int idx;
+
+    if (g == NULL || newName == NULL || newName[0] == '\0')
+    {
+        return 0;
+    }
+
+    /* 校验：名称长度 */
+    if (strlen(newName) >= MAX_NAME_LEN)
+    {
+        return 0;
+    }
+
+    /* 校验：坐标范围（和 AddLocation 用同一套边界） */
+    if (newX < MIN_COORD || newX > MAX_COORD_X ||
+        newY < MIN_COORD || newY > MAX_COORD_Y)
+    {
+        return 0;
+    }
+
+    idx = FindLocationIndexById(g, id);
+    if (idx < 0)
+    {
+        return 0;
+    }
+
+    strncpy(g->locations[idx].name, newName, MAX_NAME_LEN - 1);
+    g->locations[idx].name[MAX_NAME_LEN - 1] = '\0';
+    g->locations[idx].x = newX;
+    g->locations[idx].y = newY;
+
+    return 1;
+}
+
 
 // 添加道路（无向图，双向挂边）
 int AddRoad(Graph* g, int fromId, int toId, int distance)
 {
     int fromIdx, toIdx;
     EdgeNode* node1, * node2;
+
+    if (g == NULL)
+    {
+        return 0;
+    }
 
     fromIdx = FindLocationIndexById(g, fromId);
     toIdx = FindLocationIndexById(g, toId);

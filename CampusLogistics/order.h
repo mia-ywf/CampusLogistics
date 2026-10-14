@@ -1,4 +1,4 @@
-#ifndef ORDER_H
+﻿#ifndef ORDER_H
 #define ORDER_H
 
 #include "common.h"
@@ -12,6 +12,8 @@ typedef struct
     int priority;           // 优先级
     int status;             // 订单状态
     int createTime;         // 创建时间
+    int distance;           //本订单实际配送距离，未完成时为 0 
+
 } Order;
 
 /* 初始化订单 */
@@ -26,7 +28,15 @@ int deleteOrder(Order orders[], int* count, int orderId);
 /* 查找订单 */
 Order* findOrder(Order orders[], int count, int orderId);
 
+/* 修改订单：只能改还没开始配送（WAITING）的订单
+ * 成功返回 1，失败返回 0 */
+int updateOrder(Order orders[], int count, int orderId,
+    int newPickup, int newDelivery, int newPriority);
+
 /* 从 txt 文件读取订单 */
 int LoadOrders(const char* filename, Order orders[], int* count);   
+
+/* 把订单写回 txt */
+int SaveOrders(const char* filename, Order orders[], int count);
 
 #endif

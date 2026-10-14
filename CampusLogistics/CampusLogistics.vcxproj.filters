@@ -51,6 +51,9 @@
     <ClCompile Include="stats.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="mapdata.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="common.h">
@@ -78,6 +81,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="stats.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="mapdata.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

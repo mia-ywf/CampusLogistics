@@ -1,9 +1,13 @@
+﻿#define _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <graphics.h>
-#include <conio.h>
 
 #include "common.h"
 #include "graph.h"
+#include "mapdata.h"
 #include "order.h"
 #include "vehicle.h"
 #include "scheduler.h"
@@ -12,535 +16,857 @@
 #include "gui.h"
 #include "stats.h"
 
-#define BTN_ADD_ORDER_X  40
-#define BTN_ADD_ORDER_Y  620
-#define BTN_ADD_ORDER_W  160
-#define BTN_ADD_ORDER_H  40
-
-#define BTN_ADD_VEHICLE_X  220
-#define BTN_ADD_VEHICLE_Y  620
-#define BTN_ADD_VEHICLE_W  160
-#define BTN_ADD_VEHICLE_H  40
-
-#define BTN_DELETE_VEHICLE_X  400
-#define BTN_DELETE_VEHICLE_Y  620
-#define BTN_DELETE_VEHICLE_W  160
-#define BTN_DELETE_VEHICLE_H  40
-
-//新增
-#define BTN_DISPATCH_X  580
-#define BTN_DISPATCH_Y  620
-#define BTN_DISPATCH_W  160
-#define BTN_DISPATCH_H  40     
- 
-//新增
-/* 一辆配送中的车辆对应一个独立任务 */
+/* ==========================================================
+ * 全局运行状态
+ * 把原来散落在 main() 里的十几个局部变量打包成一个结构体，
+ * 好处：各个 DoXxx() 函数只要传一个指针，不用传十个参数
+ * 注意：用 static 放静态区，避免占用栈空间
+ * ========================================================== */
 typedef struct
 {
-    int active;                         // 任务是否正在执行
-    int orderIndex;                     // 订单在数组中的下标
-    int vehicleIndex;                   // 车辆在数组中的下标
+    Graph g;                            /* 校园地图 */
+    Order orders[MAX_ORDERS];
+    int orderCount;
+    Vehicle vehicles[MAX_VEHICLES];
+    int vehicleCount;
+    ActiveDelivery deliveries[MAX_VEHICLES];
 
-    int routeNodes[2 * MAX_LOCATIONS];  // 完整路线的节点下标
-    int routeLength;                    // 路线节点数量
-    int currentStep;                    // 当前路线节点
-    int frameCounter;                   // 帧计数器（后续不再用于控制移动）
-    double progress;                    // 当前路段的移动进度：0.0～1.0
-    double drawX;   // 车辆当前屏幕 X 坐标
-    double drawY;   // 车辆当前屏幕 Y 坐标
-} ActiveDelivery;
+    int selectedOrderId;                /* 当前选中的订单 */
+    int selectedVehicleId;              /* 当前选中的车辆 */
+    int nextOrderId;                    /* 下一个可用订单号（不再写死） */
+    int nextVehicleId;                  /* 下一个可用车辆号 */
 
-//新增
-/* 给空闲车辆分配等待订单 */
-int assignWaitingOrders(
-    Graph* graph,
-    Order orders[],
-    int orderCount,
-    Vehicle vehicles[],
-    int vehicleCount,
-    ActiveDelivery deliveries[])
-{
-    PriorityQueue queue;
-    Path pathToPickup;
-    Path pathToDelivery;
+    int dispatchRunning;                /* 调度是否在运行 */
+    int showRoadInfo;                   /* 是否显示道路长度 */
 
-    int orderIndex;
-    int vehicleIndex;
-    int assigned = 0;
-    int attempt;
-
-    initPriorityQueue(&queue);
-
-    /* 最多给每辆车分配一个新任务 */
-    for (attempt = 0; attempt < vehicleCount; attempt++)
-    {
-        /* 选择订单、车辆，并计算两段最短路径 */
-        if (!prepareNextDelivery(
-            graph,
-            orders,
-            orderCount,
-            vehicles,
-            vehicleCount,
-            &queue,
-            &orderIndex,
-            &vehicleIndex,
-            &pathToPickup,
-            &pathToDelivery))
-        {
-            break;
-        }
-
-        /* 防止覆盖正在执行的任务 */
-        if (deliveries[vehicleIndex].active)
-        {
-            break;
-        }
-
-        /* 合并两段路径 */
-        if (!buildDeliveryRoute(
-            &pathToPickup,
-            &pathToDelivery,
-            deliveries[vehicleIndex].routeNodes,
-            &deliveries[vehicleIndex].routeLength))
-        {
-            AddLog("Build delivery route failed");
-            break;
-        }
-
-        /* 正式切换订单和车辆状态 */
-        if (!startDelivery(
-            &orders[orderIndex],
-            &vehicles[vehicleIndex],
-            &pathToPickup))
-        {
-            AddLog("Start delivery failed");
-            break;
-        }
-
-        /* 初始化这辆车的配送进度 */
-        deliveries[vehicleIndex].active = 1;
-        deliveries[vehicleIndex].orderIndex = orderIndex;
-        deliveries[vehicleIndex].vehicleIndex = vehicleIndex;
-        deliveries[vehicleIndex].currentStep = 0;
-        deliveries[vehicleIndex].frameCounter = 0;
-        deliveries[vehicleIndex].progress = 0.0;
-        deliveries[vehicleIndex].drawX = 0.0;
-        deliveries[vehicleIndex].drawY = 0.0;
-
-        assigned++;
-
-        AddLog("Order assigned to vehicle");
-    }
-
-    return assigned;
-}
+    Path previewPath;                   /* 选中订单的预览路径 */
+    int hasPreview;
+} App;
 
 
- /* 平滑更新所有正在配送的车辆 */
-    void updateDeliveries(
-        Graph* graph,
-        Order orders[],
-        Vehicle vehicles[],
-        ActiveDelivery deliveries[])
+//计算下一个可用编号
+static int NextOrderId(Order orders[], int count)
 {
     int i;
-    int currentNode;
-    int nextNode;
-    int vehicleIndex;
-    double startX, startY;
-    double endX, endY;
-    double speed = 0.025;
-    ActiveDelivery* task;
+    int maxId = 0;
 
-    for (i = 0; i < MAX_VEHICLES; i++)
+    for (i = 0; i < count; i++)
     {
-        task = &deliveries[i];
-
-        if (!task->active)
-            continue;
-
-        if (task->routeLength <= 0 ||
-            task->currentStep < 0 ||
-            task->currentStep >= task->routeLength)
-            continue;
-
-        vehicleIndex = task->vehicleIndex;
-
-        if (vehicleIndex < 0 || vehicleIndex >= MAX_VEHICLES)
-            continue;
-
-        /* 已经到达路线终点 */
-        if (task->currentStep >= task->routeLength - 1)
+        if (orders[i].id > maxId)
         {
-            if (finishDelivery(
-                &orders[task->orderIndex],
-                &vehicles[vehicleIndex]))
-            {
-                AddLog("Delivery completed");
-            }
-
-            task->active = 0;
-            task->orderIndex = -1;
-            task->vehicleIndex = -1;
-            task->routeLength = 0;
-            task->currentStep = 0;
-            task->frameCounter = 0;
-            task->progress = 0.0;
-            continue;
+            maxId = orders[i].id;
         }
+    }
+    return maxId + 1;
+}
 
-        currentNode = task->routeNodes[task->currentStep];
-        nextNode = task->routeNodes[task->currentStep + 1];
+static int NextVehicleId(Vehicle vehicles[], int count)
+{
+    int i;
+    int maxId = 0;
 
-        if (currentNode < 0 || currentNode >= graph->locationCount ||
-            nextNode < 0 || nextNode >= graph->locationCount)
-            continue;
-
-        startX = graph->locations[currentNode].x;
-        startY = graph->locations[currentNode].y;
-        endX = graph->locations[nextNode].x;
-        endY = graph->locations[nextNode].y;
-
-        /* 每帧前进一小段 */
-        task->progress += speed;
-
-        if (task->progress >= 1.0)
+    for (i = 0; i < count; i++)
+    {
+        if (vehicles[i].id > maxId)
         {
-            task->progress = 0.0;
-            task->currentStep++;
-
-            /* 更新车辆逻辑位置 */
-            vehicles[vehicleIndex].position =
-                graph->locations[nextNode].id;
-
-            /* 到达最后一个节点后，在下一轮完成订单 */
+            maxId = vehicles[i].id;
         }
+    }
+    return maxId + 1;
+}
 
-        /* 根据当前路段进度计算屏幕坐标 */
-        task->drawX = startX +
-            (endX - startX) * task->progress;
+/* 丢弃鼠标消息队列 */
+static void FlushMouseQueue(void)
+{
+    ExMessage m;
 
-        task->drawY = startY +
-            (endY - startY) * task->progress;
+    while (peekmessage(&m, EX_MOUSE))
+    {
+        /* 只丢弃，不处理 */
+    }
+}
+
+// 载入全部数据
+static int LoadAll(App* app)
+{
+    int ok = 1;
+
+    InitGraph(&app->g);
+    initOrders(app->orders, &app->orderCount);
+    initVehicles(app->vehicles, &app->vehicleCount);
+    initDeliveries(app->deliveries, MAX_VEHICLES);
+
+    if (!LoadLocations(&app->g, "locations.txt"))
+    {
+        AddLog("[错误] locations.txt 打开失败");
+        ok = 0;
+    }
+    if (!LoadRoads(&app->g, "roads.txt"))
+    {
+        AddLog("[错误] roads.txt 打开失败");
+        ok = 0;
+    }
+    if (!LoadOrders("orders.txt", app->orders, &app->orderCount))
+    {
+        AddLog("[错误] orders.txt 打开失败");
+        ok = 0;
+    }
+    if (!LoadVehicles("vehicles.txt", app->vehicles, &app->vehicleCount))
+    {
+        AddLog("[错误] vehicles.txt 打开失败");
+        ok = 0;
+    }
+
+    app->nextOrderId = NextOrderId(app->orders, app->orderCount);
+    app->nextVehicleId = NextVehicleId(app->vehicles, app->vehicleCount);
+    app->selectedOrderId = -1;
+    app->selectedVehicleId = -1;
+    app->dispatchRunning = 0;
+    app->hasPreview = 0;
+
+    return ok;
+}
+
+//重置系统
+static void DoReset(App* app)
+{
+    FreeGraph(&app->g);       /* 先把旧的邻接表内存释放掉，否则会泄漏 */
+    ClearLogs();
+    LoadAll(app);
+    AddLog("[系统] 已重置，数据重新载入");
+}
+
+// 新建订单（带完整合法性校验）
+static void DoAddOrder(App* app)
+{
+    char buf[64];
+    char log[160];
+    int pickup;
+    int delivery;
+    int priority;
+    Order o;
+
+    if (app->orderCount >= MAX_ORDERS)
+    {
+        AddLog("[错误] 订单数量已达上限");
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("新建订单 (1/3)", "请输入【取货地点 ID】：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    pickup = atoi(buf);
+
+    strcpy(buf, "5");
+    if (!InputText("新建订单 (2/3)", "请输入【配送地点 ID】：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    delivery = atoi(buf);
+
+    strcpy(buf, "2");
+    if (!InputText("新建订单 (3/3)", "请输入【优先级】1-3（越大越优先）：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    priority = atoi(buf);
+
+    /* ---------------- 合法性校验 ---------------- */
+    if (FindLocationIndexById(&app->g, pickup) < 0)
+    {
+        AddLog("[错误] 取货地点不存在，订单未创建");
+        return;
+    }
+    if (FindLocationIndexById(&app->g, delivery) < 0)
+    {
+        AddLog("[错误] 配送地点不存在，订单未创建");
+        return;
+    }
+    if (pickup == delivery)
+    {
+        AddLog("[错误] 取货点与配送点不能相同");
+        return;
+    }
+    if (priority < MIN_PRIORITY || priority > MAX_PRIORITY)
+    {
+        AddLog("[错误] 优先级必须在 1-3 之间");
+        return;
+    }
+
+    o.id = app->nextOrderId;
+    o.pickup = pickup;
+    o.delivery = delivery;
+    o.priority = priority;
+    o.status = ORDER_WAITING;
+    o.createTime = 0;
+    o.distance = 0;
+
+    if (addOrder(app->orders, &app->orderCount, o))
+    {
+        sprintf(log, "[订单] 新建成功：订单%d  %d -> %d  优先级P%d",
+            o.id, pickup, delivery, priority);
+        AddLog(log);
+        app->nextOrderId++;
+    }
+    else
+    {
+        AddLog("[错误] 新建订单失败");
+    }
+}
+
+// 新建车辆
+static void DoAddVehicle(App* app)
+{
+    char buf[64];
+    char log[128];
+    int position;
+    Vehicle v;
+
+    if (app->vehicleCount >= MAX_VEHICLES)
+    {
+        AddLog("[错误] 车辆数量已达上限");
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("新建车辆", "请输入车辆【初始位置】的地点 ID：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    position = atoi(buf);
+
+    if (FindLocationIndexById(&app->g, position) < 0)
+    {
+        AddLog("[错误] 该地点不存在，车辆未创建");
+        return;
+    }
+
+    v.id = app->nextVehicleId;
+    v.position = position;
+    v.status = VEHICLE_IDLE;
+    v.currentOrder = -1;
+
+    if (addVehicle(app->vehicles, &app->vehicleCount, v))
+    {
+        sprintf(log, "[车辆] 新建成功：车辆%d 初始位置 地点%d",
+            v.id, position);
+        AddLog(log);
+        app->nextVehicleId++;
+    }
+    else
+    {
+        AddLog("[错误] 新建车辆失败");
+    }
+}
+
+// 删除车辆
+static void DoDeleteVehicle(App* app)
+{
+    int i;
+    int idx = -1;
+    Vehicle* v;
+
+    if (app->selectedVehicleId < 0)
+    {
+        AddLog("[提示] 请先在右侧【车辆列表】中点击选中一辆车");
+        return;
+    }
+
+    v = findVehicle(app->vehicles, app->vehicleCount, app->selectedVehicleId);
+    if (v == NULL)
+    {
+        AddLog("[错误] 未找到该车辆");
+        return;
+    }
+    if (v->status != VEHICLE_IDLE)
+    {
+        AddLog("[错误] 配送中的车辆不能删除");
+        return;
+    }
+
+    for (i = 0; i < app->vehicleCount; i++)
+    {
+        if (app->vehicles[i].id == app->selectedVehicleId)
+        {
+            idx = i;
+            break;
+        }
+    }
+
+    if (idx < 0)
+    {
+        AddLog("[错误] 未找到该车辆");
+        return;
+    }
+
+    if (deleteVehicle(app->vehicles, &app->vehicleCount,
+        app->selectedVehicleId))
+    {
+        /* 配送任务数组同步前移 */
+        for (i = idx; i < MAX_VEHICLES - 1; i++)
+        {
+            app->deliveries[i] = app->deliveries[i + 1];
+        }
+        initDeliveries(&app->deliveries[MAX_VEHICLES - 1], 1);
+
+        AddLog("[车辆] 删除成功");
+        app->selectedVehicleId = -1;
+    }
+    else
+    {
+        AddLog("[错误] 删除车辆失败");
+    }
+}
+
+//保存全部数据
+static void DoSaveAll(App* app)
+{
+    int ok = 1;
+
+    if (!SaveLocations(&app->g, "locations.txt")) ok = 0;
+    if (!SaveRoads(&app->g, "roads.txt"))         ok = 0;
+    if (!SaveOrders("orders.txt", app->orders, app->orderCount)) ok = 0;
+    if (!SaveVehicles("vehicles.txt", app->vehicles, app->vehicleCount)) ok = 0;
+
+    if (ok)
+    {
+        AddLog("[保存] 已写入 locations / roads / orders / vehicles");
+    }
+    else
+    {
+        AddLog("[错误] 保存失败，请确认 txt 未被其它程序占用");
+    }
+}
+
+//地图编辑：添加地点 / 添加道路 / 删除道路 / 修改距离
+static int CanEditMap(App* app)
+{
+    if (app->dispatchRunning)
+    {
+        AddLog("[提示] 请先【暂停调度】再编辑地图");
+        return 0;
+    }
+
+    app->hasPreview = 0;
+    app->selectedOrderId = -1;
+    return 1;
+}
+
+static void DoAddLocation(App* app)
+{
+    char buf[64];
+    char name[MAX_NAME_LEN];
+    char log[160];
+    int id;
+    int x;
+    int y;
+
+    if (!CanEditMap(app))
+    {
+        return;
+    }
+
+    strcpy(buf, "9");
+    if (!InputText("添加地点 (1/4)", "请输入地点【ID】（数字）：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    id = atoi(buf);
+
+    strcpy(buf, "NewSpot");
+    if (!InputText("添加地点 (2/4)", "请输入地点【名称】（英文或拼音）：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    strncpy(name, buf, MAX_NAME_LEN - 1);
+    name[MAX_NAME_LEN - 1] = '\0';
+
+    strcpy(buf, "400");
+    if (!InputText("添加地点 (3/4)", "请输入【X 坐标】0-720：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    x = atoi(buf);
+
+    strcpy(buf, "300");
+    if (!InputText("添加地点 (4/4)", "请输入【Y 坐标】0-510：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    y = atoi(buf);
+
+    if (AddLocation(&app->g, id, name, x, y) < 0)
+    {
+        AddLog("[错误] 添加地点失败：ID 重复 / 坐标越界 / 已达容量");
+        return;
+    }
+
+    sprintf(log, "[地图] 新增地点  %d %s (%d,%d)", id, name, x, y);
+    AddLog(log);
+}
+
+//修改地点
+static void DoEditLocation(App* app)
+{
+    char buf[64];
+    char name[MAX_NAME_LEN];
+    char log[192];
+    int id;
+    int x;
+    int y;
+    int idx;
+
+    if (!CanEditMap(app))
+    {
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("修改地点 (1/4)", "要修改的【地点 ID】：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    id = atoi(buf);
+
+    idx = FindLocationIndexById(&app->g, id);
+    if (idx < 0)
+    {
+        AddLog("[错误] 该地点不存在");
+        return;
+    }
+
+    /* 预填当前名称 */
+    strncpy(name, app->g.locations[idx].name, MAX_NAME_LEN - 1);
+    name[MAX_NAME_LEN - 1] = '\0';
+    if (!InputText("修改地点 (2/4)", "新的【名称】（英文或拼音）：",
+        name, sizeof(name)))
+    {
+        return;
+    }
+
+    /* 预填当前 X 坐标 */
+    sprintf(buf, "%d", app->g.locations[idx].x);
+    if (!InputText("修改地点 (3/4)", "新的【X 坐标】0-690：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    x = atoi(buf);
+
+    /* 预填当前 Y 坐标 */
+    sprintf(buf, "%d", app->g.locations[idx].y);
+    if (!InputText("修改地点 (4/4)", "新的【Y 坐标】0-510：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    y = atoi(buf);
+
+    if (UpdateLocation(&app->g, id, name, x, y))
+    {
+        sprintf(log, "[地图] 地点%d 已修改为  %s (%d,%d)", id, name, x, y);
+        AddLog(log);
+    }
+    else
+    {
+        AddLog("[错误] 修改失败：名称为空、名称过长或坐标越界");
     }
 }
 
 
+static void DoAddRoad(App* app)
+{
+    char buf[64];
+    char log[160];
+    int from;
+    int to;
+    int dist;
 
+    if (!CanEditMap(app))
+    {
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("添加道路 (1/3)", "起点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    from = atoi(buf);
+
+    strcpy(buf, "1");
+    if (!InputText("添加道路 (2/3)", "终点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    to = atoi(buf);
+
+    strcpy(buf, "100");
+    if (!InputText("添加道路 (3/3)", "道路长度 1-10000：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    dist = atoi(buf);
+
+    /* ---- 合法性校验 ---- */
+    if (from == to)
+    {
+        AddLog("[错误] 起点和终点不能相同");
+        return;
+    }
+    if (FindLocationIndexById(&app->g, from) < 0)
+    {
+        AddLog("[错误] 起点地点不存在");
+        return;
+    }
+    if (FindLocationIndexById(&app->g, to) < 0)
+    {
+        AddLog("[错误] 终点地点不存在");
+        return;
+    }
+    if (dist < MIN_ROAD_DISTANCE || dist > MAX_ROAD_DISTANCE)
+    {
+        AddLog("[错误] 道路长度越界");
+        return;
+    }
+
+    if (AddRoad(&app->g, from, to, dist))
+    {
+        sprintf(log, "[地图] 新增道路  %d - %d  长度 %d", from, to, dist);
+        AddLog(log);
+    }
+    else
+    {
+        AddLog("[错误] 添加道路失败：两点间道路已存在");
+    }
+}
+
+static void DoDeleteRoad(App* app)
+{
+    char buf[64];
+    char log[160];
+    int from;
+    int to;
+
+    if (!CanEditMap(app))
+    {
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("删除道路 (1/2)", "起点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    from = atoi(buf);
+
+    strcpy(buf, "1");
+    if (!InputText("删除道路 (2/2)", "终点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    to = atoi(buf);
+
+    if (RemoveRoad(&app->g, from, to))
+    {
+        sprintf(log, "[地图] 已删除道路  %d - %d", from, to);
+        AddLog(log);
+    }
+    else
+    {
+        AddLog("[错误] 删除道路失败：地点不存在");
+    }
+}
+
+static void DoEditRoadDistance(App* app)
+{
+    char buf[64];
+    char log[160];
+    int from;
+    int to;
+    int dist;
+    int oldDist = 0;
+
+    if (!CanEditMap(app))
+    {
+        return;
+    }
+
+    strcpy(buf, "0");
+    if (!InputText("修改距离 (1/3)", "起点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    from = atoi(buf);
+
+    strcpy(buf, "1");
+    if (!InputText("修改距离 (2/3)", "终点地点 ID：", buf, sizeof(buf)))
+    {
+        return;
+    }
+    to = atoi(buf);
+
+    if (!GetRoadDistance(&app->g, from, to, &oldDist))
+    {
+        AddLog("[错误] 这两点之间没有道路");
+        return;
+    }
+
+    sprintf(buf, "%d", oldDist);
+    if (!InputText("修改距离 (3/3)", "新的道路长度 1-10000：",
+        buf, sizeof(buf)))
+    {
+        return;
+    }
+    dist = atoi(buf);
+
+    if (UpdateRoadDistance(&app->g, from, to, dist))
+    {
+        sprintf(log, "[地图] 道路 %d - %d 长度：%d -> %d",
+            from, to, oldDist, dist);
+        AddLog(log);
+    }
+    else
+    {
+        AddLog("[错误] 修改失败：地点不存在或长度越界");
+    }
+}
+//选中订单 → 计算并预览最短路径
+static void SelectOrder(App* app, int index)
+{
+    Order* o;
+    int pIdx;
+    int dIdx;
+    char log[160];
+
+    if (index < 0 || index >= app->orderCount)
+    {
+        return;
+    }
+
+    o = &app->orders[index];
+    app->selectedOrderId = o->id;
+
+    pIdx = FindLocationIndexById(&app->g, o->pickup);
+    dIdx = FindLocationIndexById(&app->g, o->delivery);
+
+    if (pIdx < 0 || dIdx < 0)
+    {
+        app->hasPreview = 0;
+        AddLog("[错误] 订单中的地点不存在，无法计算路径");
+        return;
+    }
+
+    app->hasPreview = dijkstra(&app->g, pIdx, dIdx, &app->previewPath);
+
+    if (app->hasPreview)
+    {
+        sprintf(log, "[路径] 订单%d： %d -> %d   最短距离 %d",
+            o->id, o->pickup, o->delivery, app->previewPath.distance);
+        AddLog(log);
+    }
+    else
+    {
+        AddLog("[路径] 两点之间不连通，无可用路径");
+    }
+}
+
+// 鼠标点击分发
+static void HandleClick(App* app, int mx, int my)
+{
+    int btn;
+
+    /* 日志栏的"清空"小按钮 */
+    if (HitLogClear(mx, my))
+    {
+        ClearLogs();
+        AddLog("[系统] 日志已清空");
+        return;
+    }
+
+    btn = HitButton(mx, my);
+
+    if (btn == BTN_ADD_ORDER)
+    {
+        DoAddOrder(app);
+    }
+    else if (btn == BTN_ADD_VEHICLE)
+    {
+        DoAddVehicle(app);
+    }
+    else if (btn == BTN_DEL_VEHICLE)
+    {
+        DoDeleteVehicle(app);
+    }
+    else if (btn == BTN_ROAD_INFO)
+    {
+        app->showRoadInfo = !app->showRoadInfo;
+        AddLog(app->showRoadInfo ? "[地图] 已显示道路长度"
+            : "[地图] 已隐藏道路长度");
+    }
+    else if (btn == BTN_SAVE)
+    {
+        DoSaveAll(app);
+    }
+    else if (btn == BTN_RESET)
+    {
+        DoReset(app);
+    }
+    else if (btn == BTN_DISPATCH)
+    {
+        if (!app->dispatchRunning)
+        {
+            app->dispatchRunning = 1;
+            AddLog("[调度] 调度已启动");
+
+            if (assignWaitingOrders(&app->g, app->orders, app->orderCount,
+                app->vehicles, app->vehicleCount, app->deliveries) == 0)
+            {
+                AddLog("[调度] 当前没有可分配的订单或空闲车辆");
+            }
+        }
+        else
+        {
+            AddLog("[提示] 调度已在运行中");
+        }
+    }
+    else if (btn == BTN_PAUSE)
+    {
+        if (app->dispatchRunning)
+        {
+            app->dispatchRunning = 0;
+            AddLog("[调度] 调度已暂停");
+        }
+    }
+    else if (btn == BTN_ADD_LOC)
+    {
+        DoAddLocation(app);
+    }
+    else if (btn == BTN_EDIT_LOC)
+    {
+        DoEditLocation(app);
+    }
+    else if (btn == BTN_ADD_ROAD)
+    {
+        DoAddRoad(app);
+    }
+    else if (btn == BTN_DEL_ROAD)
+    {
+        DoDeleteRoad(app);
+    }
+    else if (btn == BTN_EDIT_ROAD)
+    {
+        DoEditRoadDistance(app);
+    }
+    else if (mx >= PANEL_X + 10 && mx <= PANEL_X + PANEL_W - 10)
+    {
+        /* 订单列表 */
+        if (my >= ORDER_ROW_Y &&
+            my < ORDER_ROW_Y + ORDER_ROW_MAX * ORDER_ROW_H)
+        {
+            int idx = (my - ORDER_ROW_Y) / ORDER_ROW_H;
+            SelectOrder(app, idx);
+        }
+        /* 车辆列表 */
+        else if (my >= VEH_ROW_Y &&
+            my < VEH_ROW_Y + VEH_ROW_MAX * VEH_ROW_H)
+        {
+            int idx = (my - VEH_ROW_Y) / VEH_ROW_H;
+
+            if (idx >= 0 && idx < app->vehicleCount)
+            {
+                app->selectedVehicleId = app->vehicles[idx].id;
+                AddLog("[选择] 已选中车辆");
+            }
+        }
+    }
+}
+
+//主函数
 int main(void)
 {
-    Graph g;
-    Order orders[MAX_ORDERS];
-    Vehicle vehicles[MAX_VEHICLES];
-    int orderCount = 0;
-    int vehicleCount = 0;
+    static App app;             /* 静态存储，避免占用栈空间 */
+    ExMessage msg;
+    int mouseX = -1;
+    int mouseY = -1;
+    int running = 1;            /* 主循环开关，按 ESC 会置 0 */
 
-    //新增
-    /* 每辆车最多对应一个正在执行的配送任务 */
-    ActiveDelivery deliveries[MAX_VEHICLES];
-    double vehicleX[MAX_VEHICLES];
-    double vehicleY[MAX_VEHICLES];
-    int moving[MAX_VEHICLES];
-    int dispatchStarted = 0;
-    int i;
-
-    int selectedOrderId = -1;
-    int selectedVehicleId = -1;
-	//新增
-    int nextVehicleId = 1;
-    int nextOrderId = 7;
-
-    Path path;
-    int hasPath = 0;
-
-    InitGraph(&g);
-    initOrders(orders, &orderCount);
-    initVehicles(vehicles, &vehicleCount);
-
-
-    //新增
-    /* 初始化所有配送任务 */
-    for (i = 0; i < MAX_VEHICLES; i++)
+    if (!LoadAll(&app))
     {
-        deliveries[i].active = 0;
-        deliveries[i].orderIndex = -1;
-        deliveries[i].vehicleIndex = -1;
-        deliveries[i].routeLength = 0;
-        deliveries[i].currentStep = 0;
-        deliveries[i].frameCounter = 0;
-        deliveries[i].progress = 0.0;
-        deliveries[i].drawX = 0.0;
-        deliveries[i].drawY = 0.0;
+        printf("数据文件加载失败：请确认 txt 文件与程序在同一目录\n");
+        return 1;
     }
 
-    if (!LoadLocations(&g, "locations.txt")) return 1;
-    if (!LoadRoads(&g, "roads.txt")) return 1;
-    LoadOrders("orders.txt", orders, &orderCount);
-    LoadVehicles("vehicles.txt", vehicles, &vehicleCount);
-	// 确定下一个车辆 ID
-    for (int i = 0; i < vehicleCount; i++)
-	{
-		if (vehicles[i].id >= nextVehicleId)
-			nextVehicleId = vehicles[i].id + 1;
-	}
-
-    hasPath = 0;
-
     InitGUI();
+    AddLog("[系统] 数据加载完成，点击【开始调度】运行配送模拟");
 
-    ExMessage msg;
-	
-    while (1)
+    while (running)
     {
-        //新增
-        /* 更新配送进度 */
-        if (dispatchStarted)
+        //逻辑更新 
+        if (app.dispatchRunning)
         {
-            updateDeliveries(&g, orders, vehicles, deliveries);
+            /* 先推进已有任务，再给新空闲的车分配订单 */
+            updateDeliveries(&app.g, app.orders, app.vehicles, app.deliveries);
+            assignWaitingOrders(&app.g, app.orders, app.orderCount,
+                app.vehicles, app.vehicleCount, app.deliveries);
         }
 
-        /* 配送过程中持续为新空闲车辆分配等待订单 */
-        if (dispatchStarted)
-        {
-            assignWaitingOrders(
-                &g,
-                orders,
-                orderCount,
-                vehicles,
-                vehicleCount,
-                deliveries);
-        }
+        //绘制
+        DrawBackground();
 
-        cleardevice();
+        /* 地图面板：面板 → 道路 → 道路长度 → 预览路径 → 配送路线 */
+        DrawMapPanel(&app.g, app.deliveries, MAX_VEHICLES,
+            &app.previewPath, app.hasPreview, app.showRoadInfo);
 
-        DrawMap(&g);
+        /* 车辆图标画在最上层，不会被路线盖住 */
+        DrawVehicleMarkers(&app.g, app.vehicles, app.vehicleCount,
+            app.deliveries);
 
-        if (hasPath)
-        {
-            DrawPath(&g, &path);
-        }
+        DrawOrderPanel(app.orders, app.orderCount, app.selectedOrderId);
+        DrawVehiclePanel(app.vehicles, app.vehicleCount, app.selectedVehicleId);
+        DrawStatsPanel(&app.g, app.orders, app.orderCount,
+            app.vehicles, app.vehicleCount);
+        DrawLegendPanel();
+        DrawLogPanel();
+        DrawButtons(mouseX, mouseY, app.dispatchRunning, app.showRoadInfo);
 
-        /* 在地图和路线绘制完成后，再绘制车辆 */
-        /* 准备每辆车的实时绘制坐标 */
-        for (i = 0; i < vehicleCount; i++)
-        {
-            moving[i] = 0;
-            vehicleX[i] = 0.0;
-            vehicleY[i] = 0.0;
-
-            if (i < MAX_VEHICLES && deliveries[i].active)
-            {
-                moving[i] = 1;
-                vehicleX[i] = deliveries[i].drawX;
-                vehicleY[i] = deliveries[i].drawY;
-            }
-        }
-
-        DrawVehicleMarkers(
-            &g, vehicles, vehicleCount,
-            vehicleX, vehicleY, moving);
-
-        DrawButton(BTN_ADD_ORDER_X, BTN_ADD_ORDER_Y,
-            BTN_ADD_ORDER_W, BTN_ADD_ORDER_H,
-            "Add Order");
-
-        DrawButton(BTN_ADD_VEHICLE_X, BTN_ADD_VEHICLE_Y,
-            BTN_ADD_VEHICLE_W, BTN_ADD_VEHICLE_H,
-            "Add Vehicle");
-
-        DrawButton(BTN_DELETE_VEHICLE_X, BTN_DELETE_VEHICLE_Y,
-            BTN_DELETE_VEHICLE_W, BTN_DELETE_VEHICLE_H,
-            "Delete Vehicle");
-        //新增
-        DrawButton(BTN_DISPATCH_X, BTN_DISPATCH_Y,
-            BTN_DISPATCH_W, BTN_DISPATCH_H,
-            "Start Dispatch");
-
-		settextcolor(WHITE); //设置文本颜色为白色
-        setbkmode(TRANSPARENT);
-        
-        DrawOrders(orders, orderCount, selectedOrderId);
-        DrawVehicles(vehicles, vehicleCount, selectedVehicleId);
-        DrawStats(orders, orderCount, vehicles, vehicleCount);
-        DrawLogs();
-
-     
-        
         FlushBatchDraw();
-        Sleep(30);
-		// 处理鼠标点击事件
-        if (peekmessage(&msg, EX_MOUSE))
+        Sleep(20);
+
+        //鼠标事件
+        while (peekmessage(&msg, EX_MOUSE))
         {
+            mouseX = msg.x;
+            mouseY = msg.y;
+
             if (msg.message == WM_LBUTTONDOWN)
             {
-                // 点击订单列表，选择订单
-                if (msg.x >= 800 && msg.x <= 1150 &&
-                    msg.y >= 50 &&
-                    msg.y < 50 + orderCount * 20 &&
-                    orderCount > 0)
-                {
-                    int index = (msg.y - 50) / 20;
-
-                    if (index >= 0 && index < orderCount && index < 15)
-                    {
-                        selectedOrderId = orders[index].id;
-
-                        Order* selectedOrder =
-                            findOrder(orders, orderCount, selectedOrderId);
-
-                        if (selectedOrder != NULL)
-                        {
-                            hasPath = dijkstra(
-                                &g,
-                                selectedOrder->pickup,
-                                selectedOrder->delivery,
-                                &path
-                            );
-
-                            if (hasPath)
-                            {
-                                AddLog("Order path found");
-                            }
-                            else
-                            {
-                                AddLog("Order path unavailable");
-                            }
-                        }
-                    }
-                }
-
-                // ① 点击车辆列表，选择车辆
-                if (msg.x >= 800 && msg.x <= 1150 &&
-                    msg.y >= 430 &&
-                    msg.y < 430 + vehicleCount * 20)
-                {
-                    int index = (msg.y - 430) / 20;
-
-                    if (index >= 0 && index < vehicleCount)
-                    {
-                        selectedVehicleId = vehicles[index].id;
-                        AddLog("Vehicle selected");
-                    }
-                }
-
-                // ② 添加订单
-                else if (IsButtonClicked(msg.x, msg.y,
-                    BTN_ADD_ORDER_X, BTN_ADD_ORDER_Y,
-                    BTN_ADD_ORDER_W, BTN_ADD_ORDER_H))
-                {
-                    if (orderCount < MAX_ORDERS)
-                    {
-                        Order o;
-
-                        o.id = nextOrderId++;
-                        o.pickup = 0;
-                        o.delivery = 5;
-                        o.priority = 2;
-                        o.status = ORDER_WAITING;
-                        o.createTime = 0;
-
-                        if (addOrder(orders, &orderCount, o))
-                        {
-                            AddLog("Add Order clicked");
-                        }
-                    }
-                }
-
-                // ③ 添加车辆
-                else if (IsButtonClicked(msg.x, msg.y,
-                    BTN_ADD_VEHICLE_X, BTN_ADD_VEHICLE_Y,
-                    BTN_ADD_VEHICLE_W, BTN_ADD_VEHICLE_H))
-                {
-                    if (vehicleCount < MAX_VEHICLES)
-                    {
-                        Vehicle v;
-
-                        v.id = nextVehicleId;
-                        v.position = 0;
-                        v.status = VEHICLE_IDLE;
-                        v.currentOrder = -1;
-
-                        if (addVehicle(vehicles, &vehicleCount, v))
-                        {
-                            AddLog("Add Vehicle clicked");
-                            nextVehicleId++;
-                        }
-                        else
-                        {
-                            AddLog("Add Vehicle failed");
-                        }
-                    }
-                    else
-                    {
-                        AddLog("Vehicle limit reached");
-                    }
-                }
-
-                // ④ 删除车辆
-                else if (IsButtonClicked(msg.x, msg.y,
-                    BTN_DELETE_VEHICLE_X, BTN_DELETE_VEHICLE_Y,
-                    BTN_DELETE_VEHICLE_W, BTN_DELETE_VEHICLE_H))
-                {
-                    if (selectedVehicleId == -1)
-                    {
-                        AddLog("Please select a vehicle first");
-                    }
-                    else
-                    {
-                        if (deleteVehicle(
-                            vehicles,
-                            &vehicleCount,
-                            selectedVehicleId))
-                        {
-                            AddLog("Delete Vehicle success");
-                            selectedVehicleId = -1;
-                        }
-                        else
-                        {
-                            AddLog("Cannot delete this vehicle");
-                        }
-                    }
-                }
-                //新增
-                // ⑤ 开始调度
-                else if (IsButtonClicked(msg.x, msg.y,
-                    BTN_DISPATCH_X, BTN_DISPATCH_Y,
-                    BTN_DISPATCH_W, BTN_DISPATCH_H))
-                {
-
-                    if (!dispatchStarted)
-                    {
-                        dispatchStarted = 1;
-                        AddLog("Dispatch started");
-
-                        if (assignWaitingOrders(
-                            &g,
-                            orders,
-                            orderCount,
-                            vehicles,
-                            vehicleCount,
-                            deliveries) == 0)
-                        {
-                            AddLog("No order assigned");
-                        }
-                    }
-
-                    else
-                    {
-                        AddLog("Dispatch already started");
-                    }
-                }
+                HandleClick(&app, msg.x, msg.y);
+                FlushMouseQueue();
             }
         }
-
-               
-        if (_kbhit())
+        //键盘：ESC 退出 
+        while (peekmessage(&msg, EX_KEY))
         {
-            if (_getch() == 27) break;
+            if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE)
+            {
+                running = 0;
+            }
         }
     }
 
     CloseGUI();
-    FreeGraph(&g);
+    FreeGraph(&app.g);
     return 0;
 }

@@ -1,4 +1,4 @@
-#ifndef SCHEDULER_H
+﻿#ifndef SCHEDULER_H
 #define SCHEDULER_H
 
 #include "common.h"
@@ -26,12 +26,12 @@ int popOrder(PriorityQueue* queue, Order orders[]);
 /* 查看队首订单（最大堆） */
 int peekOrder(PriorityQueue* queue);
 
-//新增
 /* 将所有等待中的订单重新加入最大堆 */
 int  buildPriorityQueue(PriorityQueue* queue, Order orders[], int orderCount);
 
 /* 选择距离取货点最近的空闲车辆 */
-int findNearestIdleVehicle(Vehicle vehicles[], int vehicleCount, Graph* graph, int pickLocationId);
+int findNearestIdleVehicle(Graph* graph, Vehicle vehicles[],
+    int vehicleCount, int pickupLocationId);
 
 /* 为下一个订单选择车辆并计算两段路线 */
 int prepareNextDelivery(

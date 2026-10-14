@@ -1,4 +1,4 @@
-#include "path.h"
+﻿#include "path.h"
 #include <limits.h>
 
 /* Dijkstra：计算 start 到 end 的最短路径，并恢复具体路径 */
@@ -12,6 +12,35 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
     int current;
     int next;
     int newDist;
+
+    /* ================= 参数合法性检查 ================= */
+    if (graph == NULL || path == NULL)
+    {
+        return 0;
+    }
+    if (graph->locationCount <= 0 || graph->locationCount > MAX_LOCATIONS)
+    {
+        return 0;
+    }
+    if (start < 0 || start >= graph->locationCount)
+    {
+        return 0;
+    }
+    if (end < 0 || end >= graph->locationCount)
+    {
+        return 0;
+    }
+    if (!graph->locations[start].valid || !graph->locations[end].valid)
+    {
+        return 0;
+    }
+
+    /* 先把 Path 清干净，避免调用者拿到上一次的残留数据 */
+    path->start_location = start;
+    path->end_location = end;
+    path->distance = 0;
+    path->length = 0;
+
 
     /* 初始化 */
     for (i = 0; i < graph->locationCount; i++)
@@ -86,6 +115,13 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
     
     while (current != -1)
     {
+        /* 越界保护：正常情况下 path->length 不会超过 locationCount */
+        if (path->length >= MAX_LOCATIONS)
+        {
+            path->length = 0;
+            return 0;
+        }
+
         path->nodes[path->length] = current;
         path->length++;
 
