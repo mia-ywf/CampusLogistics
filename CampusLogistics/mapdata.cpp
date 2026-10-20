@@ -11,7 +11,7 @@ int SaveLocations(Graph* g, const char* filename)
     int i;
     int count = 0;
 
-    /* ---- 参数合法性检查 ---- */
+    /*  参数合法性检查  */
     if (g == NULL || filename == NULL)
     {
         return 0;

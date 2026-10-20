@@ -32,10 +32,7 @@ int addOrder(Order orders[], int* count, Order order)
         return 0;
     }
 
-    /*
-     * 自动生成创建顺序：
-     * createTime 越小，表示订单创建得越早。
-     */
+    /* 生成创建顺序：createTime 越小，表示订单创建得越早*/
     for (i = 0; i < *count; i++)
     {
         if (orders[i].createTime >= nextCreateTime)
@@ -147,7 +144,7 @@ int updateOrder(Order orders[], int count, int orderId,
     return 1;
 }
 
-//读取订单文件
+//读取订单txt文件
 int LoadOrders(const char* filename, Order orders[], int* count)
 {
     FILE* fp;
@@ -204,7 +201,7 @@ int LoadOrders(const char* filename, Order orders[], int* count)
         if (got < 6) createTime = n;
         if (got < 7) distance = 0;
 
-        /* ---- 合法性校验：非法值一律拉回默认，防止脏数据崩程序 ---- */
+        /*合法性校验 */
         if (status < ORDER_WAITING || status > ORDER_COMPLETED)
         {
             status = ORDER_WAITING;

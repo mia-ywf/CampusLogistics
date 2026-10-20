@@ -13,7 +13,7 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
     int next;
     int newDist;
 
-    /* ================= 参数合法性检查 ================= */
+    /* 参数合法性检查  */
     if (graph == NULL || path == NULL)
     {
         return 0;
@@ -35,14 +35,14 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
         return 0;
     }
 
-    /* 先把 Path 清干净，避免调用者拿到上一次的残留数据 */
+    /* 先把 Path 清干净，避免拿到上一次的残留数据 */
     path->start_location = start;
     path->end_location = end;
     path->distance = 0;
     path->length = 0;
 
 
-    /* 初始化 */
+    /* 初始化 数组*/
     for (i = 0; i < graph->locationCount; i++)
     {
         dist[i] = INT_MAX;
@@ -52,7 +52,7 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
 
     dist[start] = 0;
 
-    /* Dijkstra */
+    /* Dijkstra核心 */
     for (i = 0; i < graph->locationCount; i++)
     {
         current = -1;
@@ -139,7 +139,7 @@ int dijkstra(Graph* graph, int start, int end, Path* path)
         return 0;
     }
 
-    /* 反转路径 */
+    /* 反转prev路径 */
     for (i = 0; i < path->length / 2; i++)
     {
         int temp;

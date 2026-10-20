@@ -1,4 +1,4 @@
-﻿#ifndef GUI_H
+#ifndef GUI_H
 #define GUI_H
 
 #include <graphics.h>    
@@ -31,7 +31,7 @@
 #define MAP_PANEL_Y 56
 #define MAP_PANEL_W 776
 #define MAP_PANEL_H 538
-#define MAP_OX      (MAP_PANEL_X + 14)   /* 地点坐标的绘制原点偏移 */
+#define MAP_OX      (MAP_PANEL_X + 14)
 #define MAP_OY      (MAP_PANEL_Y + 20)
 
 /* 按钮区：两行，每行 7 个 */
@@ -131,10 +131,11 @@ void DrawMap(Graph* g);             /* 道路 + 地点 */
 void DrawRoadInfo(Graph* g);        /* 道路长度标注 */
 void DrawPath(Graph* g, Path* path);/* 选中订单的预览路径（红） */
 void DrawDeliveryRoutes(Graph* g, ActiveDelivery deliveries[], int count);
-//平滑动画
+//车辆移动平滑动画
 void DrawVehicleMarkers(Graph* g, Vehicle vehicles[], int vehicleCount,
     ActiveDelivery deliveries[]);
 
+//面板
 void DrawOrderPanel(Order orders[], int count, int selectedOrderId);
 void DrawVehiclePanel(Vehicle vehicles[], int count, int selectedVehicleId);
 void DrawStatsPanel(Graph* g, Order orders[], int orderCount,

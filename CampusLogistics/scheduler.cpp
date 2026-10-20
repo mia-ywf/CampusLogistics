@@ -21,8 +21,8 @@ void initPriorityQueue(PriorityQueue* queue)
     queue->size = 0;
 }
 
-/* 插入订单到优先队列（最大堆）
-   queue 中保存的是订单在 orders[] 中的下标 */
+/* 插入订单到优先队列（最大堆）  queue 中保存的是订单在 orders[] 中的下标 */
+//上浮
 int pushOrder(PriorityQueue* queue, Order orders[], int orderIndex)
 {
     int i;
@@ -73,8 +73,8 @@ int pushOrder(PriorityQueue* queue, Order orders[], int orderIndex)
     return 1;
 }
 
-/* 取出优先队列中最高优先级订单
-   返回订单在 orders[] 中的下标 */
+/* 取出优先队列中最高优先级订单  返回订单在 orders[] 中的下标 */
+//下沉
 int popOrder(PriorityQueue* queue, Order orders[])
 {
     int result;
@@ -147,8 +147,7 @@ int popOrder(PriorityQueue* queue, Order orders[])
     return result;
 }
 
-/* 查看优先队列中最高优先级订单
-   返回订单在 orders[] 中的下标 */
+/* 查看优先队列中最高优先级订单   返回订单在 orders[] 中的下标 */
 int peekOrder(PriorityQueue* queue)
 {
     if (queue == NULL || queue->size == 0)
@@ -159,7 +158,7 @@ int peekOrder(PriorityQueue* queue)
     return queue->orderIndex[0];
 }
 
-//新增
+
 /* 将所有等待中的订单重新加入最大堆 */
 int buildPriorityQueue(
     PriorityQueue* queue,
@@ -192,6 +191,7 @@ int buildPriorityQueue(
     return 1;
 }
 
+
 /* 选择距离取货点最近的空闲车辆 */
 int findNearestIdleVehicle(
     Graph* graph,
@@ -199,10 +199,10 @@ int findNearestIdleVehicle(
     int vehicleCount,
     int pickupLocationId)
 {
-    int pickupIndex;
-    int startIndex;
-    int bestIndex = -1;
-    int bestDistance = INF;
+    int pickupIndex;               /*取货地点在地图数组中的下标*/ 
+    int startIndex;             /*当前车辆所在地点在地图数组中的下标*/
+    int bestIndex = -1;          /*当前找到的最佳车辆在 vehicles[] 中的下标*/
+    int bestDistance = INF;          /*当前找到的最短接货距离*/
     int i;
     Path path;
 
@@ -278,6 +278,7 @@ int prepareNextDelivery(
     int deliveryIndex;
     int vehiclePositionIndex;
 
+    /* 参数检查 */
     if (graph == NULL || orders == NULL ||
         vehicles == NULL || queue == NULL ||
         selectedOrderIndex == NULL ||

@@ -38,7 +38,7 @@ static ButtonDef g_btn[BTN_COUNT] =
     { BTN_START_X + 6 * (BTN_W + BTN_GAP), BTN_ROW1_Y, BTN_W, BTN_H,
       "重置系统", RGB(146, 64, 14) },
 
-      /* ---- 第二行：地图编辑（6 个） ---- */
+      /* ---- 第二行：地图编辑 ---- */
       { BTN_START_X + 0 * (BTN_W + BTN_GAP), BTN_ROW2_Y, BTN_W, BTN_H,
         "道路信息", RGB(51, 65, 85) },
       { BTN_START_X + 1 * (BTN_W + BTN_GAP), BTN_ROW2_Y, BTN_W, BTN_H,
@@ -52,7 +52,6 @@ static ButtonDef g_btn[BTN_COUNT] =
       { BTN_START_X + 5 * (BTN_W + BTN_GAP), BTN_ROW2_Y, BTN_W, BTN_H,
         "删除道路", RGB(146, 64, 14) }
 };
-
 
  // 通用绘制小工具
  /* 画文字：size 是字号，实际使用的是 size + FONT_BOOST */
@@ -85,7 +84,7 @@ void DrawTextCenter(int x, int y, int w, const char* text,
     outtextxy(x + (w - tw) / 2, y, (char*)text);
 }
 
-/* 带阴影的圆角面板 —— 界面的"高级感"主要来自这一层阴影 */
+/* 带阴影的圆角面板 */
 void PanelFill(int x, int y, int w, int h, COLORREF fill, COLORREF border)
 {
     /* 阴影：向右下偏移 3 像素 */
@@ -99,7 +98,7 @@ void PanelFill(int x, int y, int w, int h, COLORREF fill, COLORREF border)
     solidroundrect(x, y, x + w, y + h, 12, 12);
 }
 
-/* 面板标题：左侧一根青色竖条 + 标题文字 */
+/* 面板标题：左侧一根竖条 + 标题文字 */
 void PanelTitle(int x, int y, const char* title)
 {
     setfillcolor(C_ACCENT);
@@ -591,7 +590,7 @@ void DrawVehiclePanel(Vehicle vehicles[], int count, int selectedVehicleId)
     }
 }
 
-//系统监控面板    把配送距离显示出来
+//系统监控面板 把配送距离显示出来
 void DrawStatsPanel(Graph* g, Order orders[], int orderCount,
     Vehicle vehicles[], int vehicleCount)
 {
@@ -607,7 +606,7 @@ void DrawStatsPanel(Graph* g, Order orders[], int orderCount,
     PanelFill(x, y, PANEL_W, STAT_PANEL_H, C_PANEL, C_BORDER);
     PanelTitle(x + 16, y + 12, "系统监控");
 
-    /* ---- 订单 ---- */
+    /*  订单  */
     ry = y + 40;
     sprintf(buf, "订单  总 %d   等待 %d", st.totalOrders, st.waitingOrders);
     DrawTextXY(x + 18, ry, buf, C_TEXT, 14);
@@ -616,13 +615,13 @@ void DrawStatsPanel(Graph* g, Order orders[], int orderCount,
         st.deliveringOrders, st.completedOrders);
     DrawTextXY(x + 196, ry, buf, C_ACCENT, 14);
 
-    /* ---- 车辆 ---- */
+    /*  车辆  */
     ry += 20;
     sprintf(buf, "车辆  空闲 %d   配送中 %d",
         st.idleVehicles, st.deliveringVehicles);
     DrawTextXY(x + 18, ry, buf, C_TEXT, 14);
 
-    /* ---- 地图状态（连通性判断） ---- */
+    /*  地图状态（连通性判断）  */
     ry += 20;
     sprintf(buf, "地图  地点 %d  道路 %d", st.locationCount, st.roadCount);
     DrawTextXY(x + 18, ry, buf, C_TEXT, 14);
@@ -703,7 +702,7 @@ void DrawLogPanel(void)
 
     for (i = start; i < g_logCount; i++)
     {
-        /* 最后一条用亮色，其余用暗色，视觉上有"焦点" */
+        /* 最后一条用亮色，其余用暗色 */
         COLORREF c = (i == g_logCount - 1) ? C_TEXT : C_DIM;
         DrawTextXY(x + 20, y + 30 + (i - start) * LOG_LINE_H, g_logs[i], c, 14);
     }
@@ -890,7 +889,7 @@ int InputText(const char* title, const char* prompt, char* out, int maxLen)
 
         FlushBatchDraw();
 
-        /* ---------- 读键盘 ---------- */
+        /*  读键盘  */
         if (!peekmessage(&msg, EX_KEY | EX_CHAR))
         {
             Sleep(10);          

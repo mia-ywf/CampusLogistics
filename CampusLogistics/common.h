@@ -42,7 +42,7 @@
 
 //配送模拟：平滑动画 
  //调小 = 更慢 调大 = 更快
-#define DELIVERY_SPEED      150.0  /* 车辆移动速度：像素/秒 */
+#define DELIVERY_SPEED      150.0  /* 车辆移动速度 */
 
 //无穷大 
 #define INF                99999999

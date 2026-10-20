@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="CampusLogistics/CampusLogistics.vcxproj" />
+  <Project Path="D:/project/CampusLogistics/CampusLogistics/CampusLogistics.vcxproj" Id="7a554e1e-92a7-4cf7-8e68-4a6a409f2b6d" />
 </Solution>

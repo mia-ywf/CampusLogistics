@@ -14,14 +14,7 @@ void initVehicles(Vehicle vehicles[], int* count)
     *count = 0;
 }
 
-/* ==========================================================
- * 添加车辆
- * 校验：
- *   1. 是否超出容量
- *   2. 编号是否重复
- *   3. 状态值是否合法
- *   4. 空闲车不能挂着订单
- * ========================================================== */
+// 添加车辆
 int addVehicle(Vehicle vehicles[], int* count, Vehicle vehicle)
 {
     int i;

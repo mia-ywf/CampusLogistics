@@ -16,12 +16,7 @@
 #include "gui.h"
 #include "stats.h"
 
-/* ==========================================================
- * 全局运行状态
- * 把原来散落在 main() 里的十几个局部变量打包成一个结构体，
- * 好处：各个 DoXxx() 函数只要传一个指针，不用传十个参数
- * 注意：用 static 放静态区，避免占用栈空间
- * ========================================================== */
+// 全局应用状态
 typedef struct
 {
     Graph g;                            /* 校园地图 */
@@ -33,7 +28,7 @@ typedef struct
 
     int selectedOrderId;                /* 当前选中的订单 */
     int selectedVehicleId;              /* 当前选中的车辆 */
-    int nextOrderId;                    /* 下一个可用订单号（不再写死） */
+    int nextOrderId;                    /* 下一个可用订单号 */
     int nextVehicleId;                  /* 下一个可用车辆号 */
 
     int dispatchRunning;                /* 调度是否在运行 */
@@ -59,7 +54,6 @@ static int NextOrderId(Order orders[], int count)
     }
     return maxId + 1;
 }
-
 static int NextVehicleId(Vehicle vehicles[], int count)
 {
     int i;
@@ -131,8 +125,8 @@ static int LoadAll(App* app)
 static void DoReset(App* app)
 {
     FreeGraph(&app->g);       /* 先把旧的邻接表内存释放掉，否则会泄漏 */
-    ClearLogs();
-    LoadAll(app);
+	ClearLogs();             /* 清空日志 */
+	LoadAll(app);            /* 重新载入数据 */
     AddLog("[系统] 已重置，数据重新载入");
 }
 
@@ -176,7 +170,7 @@ static void DoAddOrder(App* app)
     }
     priority = atoi(buf);
 
-    /* ---------------- 合法性校验 ---------------- */
+    /*  合法性校验  */
     if (FindLocationIndexById(&app->g, pickup) < 0)
     {
         AddLog("[错误] 取货地点不存在，订单未创建");
@@ -357,7 +351,7 @@ static int CanEditMap(App* app)
     app->selectedOrderId = -1;
     return 1;
 }
-
+//添加地点
 static void DoAddLocation(App* app)
 {
     char buf[64];
@@ -484,7 +478,7 @@ static void DoEditLocation(App* app)
     }
 }
 
-
+// 添加道路 / 删除道路 / 修改距离
 static void DoAddRoad(App* app)
 {
     char buf[64];
@@ -551,7 +545,7 @@ static void DoAddRoad(App* app)
         AddLog("[错误] 添加道路失败：两点间道路已存在");
     }
 }
-
+// 删除道路
 static void DoDeleteRoad(App* app)
 {
     char buf[64];
@@ -588,7 +582,7 @@ static void DoDeleteRoad(App* app)
         AddLog("[错误] 删除道路失败：地点不存在");
     }
 }
-
+// 修改道路长度
 static void DoEditRoadDistance(App* app)
 {
     char buf[64];
@@ -810,7 +804,7 @@ int main(void)
 
     InitGUI();
     AddLog("[系统] 数据加载完成，点击【开始调度】运行配送模拟");
-
+    
     while (running)
     {
         //逻辑更新 

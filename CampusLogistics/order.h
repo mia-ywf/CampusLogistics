@@ -28,8 +28,7 @@ int deleteOrder(Order orders[], int* count, int orderId);
 /* 查找订单 */
 Order* findOrder(Order orders[], int count, int orderId);
 
-/* 修改订单：只能改还没开始配送（WAITING）的订单
- * 成功返回 1，失败返回 0 */
+/* 修改订单*/
 int updateOrder(Order orders[], int count, int orderId,
     int newPickup, int newDelivery, int newPriority);
 

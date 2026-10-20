@@ -29,7 +29,7 @@ typedef struct
 void InitGraph(Graph* g);
 int  FindLocationIndexById(Graph* g, int id);
 int  AddLocation(Graph* g, int id, const char* name, int x, int y);
-//修改地点：改名称和坐标（不允许改 ID）  成功返回 1，失败返回 0 
+//修改地点：改名称和坐标（不允许改 ID） 
 int  UpdateLocation(Graph* g, int id, const char* newName, int newX, int newY);
 
 int  AddRoad(Graph* g, int fromId, int toId, int distance);

@@ -53,12 +53,7 @@ int finishDelivery(Order* order, Vehicle* vehicle)
 }
 
 
- /* 合并两段路径
- * 车 → 取货点： A B C
- * 取货点 → 送货点： C D E
- * 合并结果： A B C D E   （取货点 C 只保留一次）
- */
-
+ //合并两段路径
 int buildDeliveryRoute(Path* pathToPickup, Path* pathToDelivery,
     int routeNodes[], int* routeLength)
 {
@@ -194,7 +189,7 @@ int assignWaitingOrders(Graph* graph, Order orders[], int orderCount,
             break;
         }
 
-        /*  切换订单和车辆状态 */
+        /* 切换订单和车辆状态 */
         if (!startDelivery(&orders[orderIndex],
             &vehicles[vehicleIndex], &pathToPickup))
         {
@@ -279,8 +274,7 @@ static void updateAnimPos(Graph* graph, ActiveDelivery* task)
         (graph->locations[toIdx].y - graph->locations[fromIdx].y) * t;
 }
 
-//推进配送（平滑版）
- 
+//推进配送（平滑）
 void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
     ActiveDelivery deliveries[])
 {
@@ -308,7 +302,7 @@ void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
             continue;
         }
 
-        /* ---- 边界保护：任务数据不合法就直接作废，避免越界 ---- */
+        //边界保护
         if (task->vehicleIndex < 0 || task->vehicleIndex >= MAX_VEHICLES ||
             task->orderIndex < 0 || task->orderIndex >= MAX_ORDERS ||
             task->routeLength <= 0 ||
@@ -323,7 +317,7 @@ void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
             continue;
         }
 
-        //已经站在终点：这一帧收尾完成配送 
+        //已经站在终点：收尾完成配送 
         if (task->currentStep >= task->routeLength - 1)
         {
             updateAnimPos(graph, task);
@@ -349,7 +343,7 @@ void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
             continue;
         }
 
-        /* ---- 本帧真实经过了多久（秒）----*/
+        /* 本帧经过了多久 */
         dt = (double)(now - task->lastTick) / 1000.0;
         task->lastTick = now;
 
@@ -378,7 +372,7 @@ void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
             task->progress += DELIVERY_SPEED * dt / segLen;
         }
 
-        /* ---- 走满一段就换下一段---- */
+        /* 走满一段就换下一段 */
         while (task->progress >= 1.0 &&
             task->currentStep < task->routeLength - 1)
         {
@@ -427,7 +421,7 @@ void updateDeliveries(Graph* graph, Order orders[], Vehicle vehicles[],
             task->progress = 0.0;
         }
 
-        /* ---- 刷新这一帧车辆要画在哪 ---- */
+        /*  刷新这一帧车辆要画在哪  */
         updateAnimPos(graph, task);
     }
 }
